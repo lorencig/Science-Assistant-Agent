@@ -1,71 +1,72 @@
-# config.py
+import os
 
 # --- 1. GLOBAL SETTINGS ---
-DAYS_LOOKBACK = 2
-MIN_RELEVANCE_SCORE = 7
+# 7 Days is the production standard.
+DAYS_LOOKBACK = 30
+MIN_RELEVANCE_SCORE = 5
 
-# --- 2. OPENALEX CONCEPT IDS ---
-CONCEPTS = {
-    "Microfluidics": "C190062978",
-    "Nanoparticles": "C104779481",
-    "Inorganic_Chem": "C188027245",
-    "Machine_Learning": "C154945302",
-    "Materials_Science": "C192562407",
-    "Iron_Oxide": "C2779702343", 
-    "Biomedical_Eng": "C127313418",
-    "Lipids": "C177713603",
-    "Polymers": "C104186524",
-    "Artificial_Intelligence": "C154945302"
-}
+# --- 2. SESSIONS (The "Wide Funnel" Production Config) ---
 
-# --- 3. THE SESSIONS ---
 SESSIONS = [
+
+    # -----------------------------------------------------------
+    # 1. Flow Synthesis & Post-Processing
+    # -----------------------------------------------------------
     {
-        "id": "fluidic_inorganic",
-        "title": "⚗️ Inorganic Fluidic Synthesis",
+        "id": "flow_synthesis",
+        "title": "⚗️ Flow Synthesis, Coating & Assembly",
         "api_filters": [
-            f"concepts.id:{CONCEPTS['Microfluidics']}",
-            f"concepts.id:{CONCEPTS['Nanoparticles']}",
-            f"concepts.id:!{CONCEPTS['Lipids']}",
-            f"concepts.id:!{CONCEPTS['Polymers']}"
+            # The "Wide Net": Catch all Flow Chemistry papers.
+            # We rely on Gemini to discard the 95% that aren't about Nanoparticles.
+            'default.search:("flow chemistry" OR "microfluidics" OR "microreactor" OR "continuous flow" OR "droplet microfluidics") AND ("nanoparticle" OR "iron oxide" OR "inorganic")'
         ],
         "system_prompt": """
-        ROLE: Expert Material Scientist.
-        TASK: Filter for INORGANIC nanoparticle synthesis in microfluidics.
-        RULES:
-        - REJECT (Score 1): Lipid Nanoparticles (LNPs), Liposomes, Polymer encapsulation.
-        - REJECT (Score 2): Biological "drug delivery" without synthesis focus.
-        - ACCEPT (Score 8+): Novel flow reactors, Gold/Silver/Silica/Quantum Dots synthesis.
+        ROLE: Expert Flow Chemist.
+        TASK: Filter a broad feed of microfluidics papers.
+        
+        CRITICAL RULES:
+        - REJECT (Score 0): Biology (organs-on-chip), pure physics (droplet dynamics), or organic drug synthesis.
+        - ACCEPT (Score 10): Flow synthesis/assembly SPECIFICALLY of Iron Oxide, SPIONs, or Magnetite.
+        - ACCEPT (Score 8): Flow synthesis of inorganic nanoparticles (Gold, Silica) IF the method is transferable.
         """
     },
+
+    # -----------------------------------------------------------
+    # 2. Biomedical Applications (Already Optimized)
+    # -----------------------------------------------------------
     {
-        "id": "mat_informatics",
-        "title": "🤖 Materials Informatics",
+        "id": "bio_app",
+        "title": "🧲 Biomedical Nanomaterials",
         "api_filters": [
-            f"concepts.id:{CONCEPTS['Materials_Science']}",
-            f"concepts.id:{CONCEPTS['Artificial_Intelligence']}"
-        ],
-        "system_prompt": """
-        ROLE: Research Scientist in AI for Materials.
-        TASK: Identify papers using ML/AI to discover or optimize materials.
-        RULES:
-        - ACCEPT (Score 8+): Generative models (GANs/Diffusions) for crystals, Bayesian optimization, GNNs.
-        - REJECT (Score 3): Routine use of commercial software without algorithmic novelty.
-        """
-    },
-    {
-        "id": "bio_iron",
-        "title": "🧲 Bio-Medical Iron Oxide",
-        "api_filters": [
-            f"concepts.id:{CONCEPTS['Iron_Oxide']}",
-            f"concepts.id:{CONCEPTS['Biomedical_Eng']}"
+            # This topic is huge, so we CAN use the strict AND filter here safely.
+            'default.search:("iron oxide" OR "SPION" OR "nanoparticle") AND ("hyperthermia" OR "MRI" OR "cancer" OR "MPI")'
         ],
         "system_prompt": """
         ROLE: Biomedical Engineer.
-        TASK: Track Iron Oxide Nanoparticles (SPIONs) applications.
-        RULES:
-        - ACCEPT: Magnetic Hyperthermia, MRI Contrast, Magnetic actuation.
-        - REJECT: Water treatment or environmental remediation.
+        TASK: Track inorganic nanoparticles in medicine.
+        SCORING RULES:
+        - 10: Iron Oxide/SPIONs for Hyperthermia/MRI.
+        - 0: Routine drug delivery.
+        """
+    },
+
+    # -----------------------------------------------------------
+    # 3. AI for Materials
+    # -----------------------------------------------------------
+    {
+        "id": "ai_materials",
+        "title": "🤖 AI in Material Science",
+        "api_filters": [
+             # Wide Net: AI + Synthesis/Materials
+            'default.search:("machine learning" OR "autonomous lab" OR "active learning") AND ("synthesis" OR "nanomaterials")'
+        ],
+        "system_prompt": """
+        ROLE: Materials Informatics Researcher.
+        TASK: Identify AI applied to material discovery.
+        SCORING RULES:
+        - 10: AI for NANOMATERIALS in BIOMEDICAL use.
+        - 8: AI for inorganic synthesis optimization.
+        - 0: Generic AI reviews.
         """
     }
 ]

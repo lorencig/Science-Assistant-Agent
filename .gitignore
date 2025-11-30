@@ -8,3 +8,4 @@ tools/token.json
 # Python Junk
 __pycache__/
 *.pyc
+.env

@@ -12,6 +12,10 @@ from googleapiclient.discovery import build
 import config
 import database
 import utils
+from dotenv import load_dotenv  # <--- ADD THIS IMPORT
+
+# --- LOAD ENVIRONMENT VARIABLES ---
+load_dotenv()
 
 # --- CONFIGURATION ---
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
@@ -20,12 +24,25 @@ database.init_db()
 # --- 1. OPENALEX FETCHER ---
 def fetch_papers(filters):
     date_filter = (datetime.now() - timedelta(days=config.DAYS_LOOKBACK)).strftime("%Y-%m-%d")
+    
+    # Join filters with commas (OpenAlex interprets this as AND)
     filter_str = ",".join(filters)
+    
+    # Construct the URL
     url = f"https://api.openalex.org/works?filter=from_publication_date:{date_filter},{filter_str}&per-page=50&select=id,title,doi,abstract_inverted_index"
     
+    # --- DEBUG: PRINT THE EXACT URL ---
+    print(f"   [DEBUG URL]: {url}") 
+    
     try:
-        return requests.get(url).json().get('results', [])
-    except:
+        res = requests.get(url)
+        if res.status_code == 200:
+            return res.json().get('results', [])
+        else:
+            print(f"   [API ERROR]: Status {res.status_code} - {res.text}")
+            return []
+    except Exception as e:
+        print(f"   [Error connecting]: {e}")
         return []
 
 # --- 2. GEMINI FILTER ---
@@ -34,11 +51,32 @@ def analyze_paper(paper, prompt):
     full_prompt = f"{prompt}\n\nPAPER: {paper['title']}\nABSTRACT: {abstract}\n\nOUTPUT JSON: {{ \"score\": 0-10, \"novelty\": \"1 sentence summary\" }}"
     
     try:
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        model = genai.GenerativeModel('gemini-flash-latest')
         res = model.generate_content(full_prompt, generation_config={"response_mime_type": "application/json"})
-        return json.loads(res.text)
-    except:
-        return {"score": 0}
+        
+        # --- DEBUG PRINT ---
+        # print(f"Raw Gemini Reply: {res.text[:100]}...") 
+        
+        # CLEANUP: Remove Markdown backticks if Gemini adds them
+        clean_text = res.text.strip()
+        if clean_text.startswith("```json"):
+            clean_text = clean_text[7:]
+        if clean_text.startswith("```"):
+            clean_text = clean_text[3:]
+        if clean_text.endswith("```"):
+            clean_text = clean_text[:-3]
+            
+        data = json.loads(clean_text)
+        
+        # --- SCORE CHECK ---
+        print(f"   [AI] Score: {data.get('score')} | {paper['title'][:30]}...")
+        
+        return data
+        
+    except Exception as e:
+        print(f"   [ERROR] Gemini Failed: {e}")
+        # If it fails, return score 0 so we don't crash
+        return {"score": 0, "novelty": "Error"}
 
 # --- 3. GMAIL SENDER (HEADLESS) ---
 def send_email(report_html):
@@ -60,6 +98,7 @@ def send_email(report_html):
     service.users().messages().send(userId="me", body={'raw': raw}).execute()
 
 # --- MAIN LOOP ---
+# --- MAIN LOOP ---
 def main():
     report_content = "<h1>🔬 Daily Scientific Digest</h1>"
     has_news = False
@@ -67,19 +106,27 @@ def main():
     for session in config.SESSIONS:
         print(f"Checking {session['title']}...")
         papers = fetch_papers(session['api_filters'])
-        
+        print(f"   [DEBUG] Found {len(papers)} raw papers from API.")
         session_html = f"<h2>{session['title']}</h2><ul>"
         count = 0
         
         for p in papers:
+            # 1. Check if we've seen it (No API cost here)
             if not database.is_new(p['id']): continue
             
+            # 2. Call Gemini (This costs 1 request)
             analysis = analyze_paper(p, session['system_prompt'])
+            
+            # 3. Add to report if good
             if analysis['score'] >= config.MIN_RELEVANCE_SCORE:
                 link = p.get('doi') or "#"
                 session_html += f"<li><b>[{analysis['score']}/10] <a href='{link}'>{p['title']}</a></b><br><i>{analysis['novelty']}</i></li>"
                 count += 1
-                time.sleep(1) # Rate limit respect
+            
+            # 4. CRITICAL: Sleep after EVERY analysis, even if the score was 0.
+            # We sleep 32s because the limit is 2 requests per minute (60s / 2 = 30s + buffer).
+            print("   [Rate Limit] Sleeping 32s...")
+            time.sleep(32) 
         
         session_html += "</ul>"
         if count > 0:
