@@ -1,0 +1,10 @@
+# Secrets
+credentials.json
+token.json
+.venv
+tools/credentials.json
+tools/token.json
+
+# Python Junk
+__pycache__/
+*.pyc
