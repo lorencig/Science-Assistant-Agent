@@ -1,0 +1,33 @@
+name: Daily Science Digest
+on:
+  schedule:
+    - cron: '0 7 * * *' # Runs at 7:00 AM UTC
+  workflow_dispatch:
+
+jobs:
+  run-digest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+      
+      - run: pip install -r requirements.txt
+      
+      - name: Run Aggregator
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GMAIL_CLIENT_ID: ${{ secrets.GMAIL_CLIENT_ID }}
+          GMAIL_CLIENT_SECRET: ${{ secrets.GMAIL_CLIENT_SECRET }}
+          GMAIL_REFRESH_TOKEN: ${{ secrets.GMAIL_REFRESH_TOKEN }}
+          EMAIL_RECIPIENT: ${{ secrets.EMAIL_RECIPIENT }}
+        run: python main.py
+        
+      # Optional: Commit the database so we remember what we saw tomorrow
+      - name: Save Database
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "Update seen papers db"
+          file_pattern: "seen_papers.db"

@@ -1,0 +1,4 @@
+google-generativeai
+semanticscholar
+feedparser
+duckduckgo-search
