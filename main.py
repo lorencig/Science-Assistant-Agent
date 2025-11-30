@@ -125,7 +125,7 @@ def main():
             
             # 4. CRITICAL: Sleep after EVERY analysis, even if the score was 0.
             # We sleep 32s because the limit is 2 requests per minute (60s / 2 = 30s + buffer).
-            print("   [Rate Limit] Sleeping 32s...")
+            print("   [Rate Limit] Sleeping 32s...", flush=True)
             time.sleep(32) 
         
         session_html += "</ul>"
