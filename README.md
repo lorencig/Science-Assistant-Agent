@@ -49,9 +49,9 @@ cd AGENT
 pip install -r requirements.txt
 ```
 
-### 3\. Configure Environment
+### 3\. Configure Environment & Secrets
 
-Create a `.env` file in the root directory or add secrets to your github if you want to run it via it. You will need your API keys here (see the **Appendix** below for how to get the Gmail token).
+Option A: For Local Testing Create a `.env` file in the root directory: 
 
 ```bash
 GEMINI_API_KEY="your_google_ai_studio_key"
@@ -62,8 +62,13 @@ GMAIL_CLIENT_ID="your_client_id"
 GMAIL_CLIENT_SECRET="your_client_secret"
 GMAIL_REFRESH_TOKEN="your_refresh_token"
 ```
-
-### 4\. Run the Agent
+Option B: For GitHub Actions (Production) To make this run automatically in the cloud, you must store these keys in GitHub's secure vault:
+   * Go to your repository on GitHub.
+   * Navigate to Settings > Secrets and variables > Actions.
+   * Click New repository secret.
+   * Add each of the 5 variables listed above (GEMINI_API_KEY, GMAIL_REFRESH_TOKEN, etc.) individually.
+  
+### 4\. Run the Agent (Locally)
 
 ```bash
 python main.py
@@ -99,14 +104,14 @@ To change what the agent looks for, edit the `SESSIONS` list:
 
 This project is designed to run serverless using **GitHub Actions**. It runs entirely free of charge on the standard tier.
 
-The workflow is defined in `.github/workflows/daily_digest.yml` and is scheduled to run every day at **07:00 UTC**.
+The workflow is defined in `.github/workflows/daily_digest.yml` and is scheduled on the 1st and 15th of every month at **07:00 UTC**.
 
 **To deploy:**
 
 1.  Push your code to GitHub.
 2.  Go to your repository **Settings \> Secrets and variables \> Actions**.
 3.  Add the 5 secrets from your `.env` file (`GEMINI_API_KEY`, `GMAIL_REFRESH_TOKEN`, etc.).
-4.  The bot will automatically wake up tomorrow morning.
+4.  The bot will automatically wake up on the next scheduled run.
 
 -----
 
