@@ -39,8 +39,8 @@ Follow these steps to run the agent on your own machine for testing.
 
 ### 1. Clone the repository
 ```bash
-git clone [https://github.com/lorencig/AGENT.git](https://github.com/lorencig/AGENT.git)
-cd AGENT
+git clone [https://github.com/lorencig/Science-Assistant-Agent.git](https://github.com/lorencig/Science-Assistant-Agent.git)
+cd Science-Assistant-Agent
 ````
 
 ### 2\. Install dependencies
