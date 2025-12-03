@@ -1,9 +1,8 @@
 # Secrets
 credentials.json
-token.json
-.venv
 tools/credentials.json
-tools/token.json
+
+.venv
 
 # Python Junk
 __pycache__/
