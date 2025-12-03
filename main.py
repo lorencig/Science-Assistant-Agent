@@ -24,11 +24,7 @@ database.init_db()
 # --- 1. OPENALEX FETCHER ---
 def fetch_papers(filters):
     date_filter = (datetime.now() - timedelta(days=config.DAYS_LOOKBACK)).strftime("%Y-%m-%d")
-    
-    # Join filters with commas (OpenAlex interprets this as AND)
     filter_str = ",".join(filters)
-    
-    # Construct the URL
     url = f"https://api.openalex.org/works?filter=from_publication_date:{date_filter},{filter_str}&per-page=50&select=id,title,doi,abstract_inverted_index"
     
     # --- DEBUG: PRINT THE EXACT URL ---
@@ -55,9 +51,6 @@ def analyze_paper(paper, prompt):
         res = model.generate_content(full_prompt, generation_config={"response_mime_type": "application/json"})
         
         # --- DEBUG PRINT ---
-        # print(f"Raw Gemini Reply: {res.text[:100]}...") 
-        
-        # CLEANUP: Remove Markdown backticks if Gemini adds them
         clean_text = res.text.strip()
         if clean_text.startswith("```json"):
             clean_text = clean_text[7:]
@@ -75,14 +68,12 @@ def analyze_paper(paper, prompt):
         
     except Exception as e:
         print(f"   [ERROR] Gemini Failed: {e}")
-        # If it fails, return score 0 so we don't crash
         return {"score": 0, "novelty": "Error"}
 
 # --- 3. GMAIL SENDER (HEADLESS) ---
 def send_email(report_html):
-    # Reconstruct credentials from GitHub Secrets
     creds = Credentials(
-        None, # No access token (refresh will fetch it)
+        None,
         refresh_token=os.getenv("GMAIL_REFRESH_TOKEN"),
         token_uri="https://oauth2.googleapis.com/token",
         client_id=os.getenv("GMAIL_CLIENT_ID"),
@@ -98,7 +89,6 @@ def send_email(report_html):
     service.users().messages().send(userId="me", body={'raw': raw}).execute()
 
 # --- MAIN LOOP ---
-# --- MAIN LOOP ---
 def main():
     report_content = "<h1>🔬 Daily Scientific Digest</h1>"
     has_news = False
@@ -111,10 +101,10 @@ def main():
         count = 0
         
         for p in papers:
-            # 1. Check if we've seen it (No API cost here)
+            # 1. Check if we've seen it
             if not database.is_new(p['id']): continue
             
-            # 2. Call Gemini (This costs 1 request)
+            # 2. Call Gemini 
             analysis = analyze_paper(p, session['system_prompt'])
             
             # 3. Add to report if good
@@ -123,8 +113,6 @@ def main():
                 session_html += f"<li><b>[{analysis['score']}/10] <a href='{link}'>{p['title']}</a></b><br><i>{analysis['novelty']}</i></li>"
                 count += 1
             
-            # 4. CRITICAL: Sleep after EVERY analysis, even if the score was 0.
-            # We sleep 32s because the limit is 2 requests per minute (60s / 2 = 30s + buffer).
             print("   [Rate Limit] Sleeping 32s...", flush=True)
             time.sleep(32) 
         
