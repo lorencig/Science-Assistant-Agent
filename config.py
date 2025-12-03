@@ -1,9 +1,9 @@
 import os
 
 # --- 1. GLOBAL SETTINGS ---
-# 7 Days is the production standard.
-DAYS_LOOKBACK = 30
-MIN_RELEVANCE_SCORE = 5
+
+DAYS_LOOKBACK = 15
+MIN_RELEVANCE_SCORE = 6
 
 # --- 2. SESSIONS (The "Wide Funnel" Production Config) ---
 
@@ -16,8 +16,6 @@ SESSIONS = [
         "id": "flow_synthesis",
         "title": "⚗️ Flow Synthesis, Coating & Assembly",
         "api_filters": [
-            # The "Wide Net": Catch all Flow Chemistry papers.
-            # We rely on Gemini to discard the 95% that aren't about Nanoparticles.
             'default.search:("flow chemistry" OR "microfluidics" OR "microreactor" OR "continuous flow" OR "droplet microfluidics") AND ("nanoparticle" OR "iron oxide" OR "inorganic")'
         ],
         "system_prompt": """
@@ -38,7 +36,6 @@ SESSIONS = [
         "id": "bio_app",
         "title": "🧲 Biomedical Nanomaterials",
         "api_filters": [
-            # This topic is huge, so we CAN use the strict AND filter here safely.
             'default.search:("iron oxide" OR "SPION" OR "nanoparticle") AND ("hyperthermia" OR "MRI" OR "cancer" OR "MPI")'
         ],
         "system_prompt": """
@@ -57,7 +54,6 @@ SESSIONS = [
         "id": "ai_materials",
         "title": "🤖 AI in Material Science",
         "api_filters": [
-             # Wide Net: AI + Synthesis/Materials
             'default.search:("machine learning" OR "autonomous lab" OR "active learning") AND ("synthesis" OR "nanomaterials")'
         ],
         "system_prompt": """
