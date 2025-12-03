@@ -1,4 +1,4 @@
-name: Daily Science Digest
+name: Science Digest
 on:
   schedule:
     - cron: '0 7 1,15 * *'
@@ -8,15 +8,15 @@ jobs:
   run-digest:
     runs-on: ubuntu-latest
     
-    # 👇 ADD THIS BLOCK HERE 👇
+
     permissions:
       contents: write
-    # 👆 THIS GIVES THE BOT PERMISSION TO PUSH 👆
+
 
     steps:
       - uses: actions/checkout@v4
         with:
-          # We need to fetch the full history so the bot knows how to push
+          
           ref: ${{ github.head_ref }}
       
       - uses: actions/setup-python@v5
